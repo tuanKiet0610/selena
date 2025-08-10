@@ -9,10 +9,14 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.selena.service.UserDetailsServiceImpl;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 
 @Configuration
 @EnableWebSecurity
 public class SecureConf extends WebSecurityConfigurerAdapter{
+	@Autowired
+	private JwtFilter jwtFilter;
 	@Override
 	protected void configure(final HttpSecurity http) throws Exception {
 		http.csrf().disable().authorizeRequests() // bắt đầu cấu hình: tất cả các requests từ 
@@ -23,7 +27,7 @@ public class SecureConf extends WebSecurityConfigurerAdapter{
 		
 		//các request kiểu: "/admin/" là phải đăng nhập (authenticated)
 		.antMatchers("/admin/**").hasAnyAuthority("ADMIN")
-		.and()
+		.and().addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 		
 		//cấu hình trang đăng nhập
 		// /login: một request trong LoginController
