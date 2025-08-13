@@ -11,6 +11,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import com.selena.service.UserDetailsServiceImpl;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.beans.Customizer;
+
 
 @Configuration
 @EnableWebSecurity
@@ -18,32 +20,36 @@ public class SecureConf extends WebSecurityConfigurerAdapter{
 	@Autowired
 	private JwtFilter jwtFilter;
 	@Override
-	protected void configure(final HttpSecurity http) throws Exception {
-		http.csrf().disable().authorizeRequests() // bắt đầu cấu hình: tất cả các requests từ 
-													// trình duyệt đều được bắt trong hàm này
-		
-		//cho phép các request static resources không bị ràng buộc(permitAll)
-		.antMatchers("/css/**", "/js/**", "/upload/**", "/img/**", "/login", "/logout").permitAll()
-		
-		//các request kiểu: "/admin/" là phải đăng nhập (authenticated)
-		.antMatchers("/admin/**").hasAnyAuthority("ADMIN")
-		.and().addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-		
-		//cấu hình trang đăng nhập
-		// /login: một request trong LoginController
-		.formLogin().loginPage("/login").loginProcessingUrl("/login_processing_url")
-		.successHandler(new UrlAuthenticationSuccessHandler())
-		
-		.failureUrl("/login?login_error=true")
-		
-		.and()
-		
-		//cấu hình request mapping cho phần logout
-		.logout().logoutUrl("/logout").logoutSuccessUrl("/home").invalidateHttpSession(true)
-		.deleteCookies("JSESSIONID")
-		.and().rememberMe().key("uniqueAndSecret").tokenValiditySeconds(86400);
+	protected void configure(HttpSecurity http) throws Exception {
+		http.csrf().disable()
+				.authorizeRequests()
+				.antMatchers(
+						"/css/**","/js/**","/upload/**","/img/**",
+						"/login","/logout",
+						"/oauth2/**",              // khởi tạo OAuth2
+						"/login/oauth2/**"         // callback từ IdP
+				).permitAll()
+				.antMatchers("/admin/**").hasAnyAuthority("ADMIN")
+				.anyRequest().authenticated()
+				.and()
+				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+				.formLogin()
+				.loginPage("/login")
+				.loginProcessingUrl("/login_processing_url")
+				.successHandler(new UrlAuthenticationSuccessHandler())
+				.failureUrl("/login?login_error=true")
+				.and()
+				.oauth2Login()
+				.loginPage("/login")
+				.defaultSuccessUrl("/home", true)   // dùng URL cố định để tránh lỗi handler
+				.and()
+				.logout().logoutUrl("/logout").logoutSuccessUrl("/home")
+				.invalidateHttpSession(true).deleteCookies("JSESSIONID")
+				.and()
+				.rememberMe().key("uniqueAndSecret").tokenValiditySeconds(86400);
 	}
-	
+
+
 	@Autowired
 	private UserDetailsServiceImpl userDetailsService;
 	
